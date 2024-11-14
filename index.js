@@ -1,11 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const cors = require('cors');  // Import CORS
 
 // Create an Express app
 const app = express();
 
 // Middleware
+app.use(cors());  // Enable CORS for all routes
 app.use(bodyParser.json());
 
 // MongoDB URL (replace with your actual MongoDB connection string)
@@ -47,19 +49,19 @@ app.post('/api/store-location', async (req, res) => {
   }
 });
 
-// Route to get all locations by date range
+// Route to get all locations
 app.get('/api/get-all-locations', async (req, res) => {
-    try {
-      // Retrieve all location data from the database
-      const locations = await Location.find();
-  
-      // Respond with the data
-      res.status(200).json(locations);
-    } catch (error) {
-      console.error('Error retrieving locations:', error);
-      res.status(500).json({ message: 'Failed to retrieve locations' });
-    }
-  });
+  try {
+    // Retrieve all location data from the database
+    const locations = await Location.find();
+
+    // Respond with the data
+    res.status(200).json(locations);
+  } catch (error) {
+    console.error('Error retrieving locations:', error);
+    res.status(500).json({ message: 'Failed to retrieve locations' });
+  }
+});
 
 // Start the server
 const PORT = process.env.PORT || 5001;
