@@ -20,9 +20,14 @@ mongoose.connect(dbURL, { useNewUrlParser: true, useUnifiedTopology: true })
 
 // Create a schema for Location Data
 const locationSchema = new mongoose.Schema({
-  latitude: { type: Number, required: true },
-  longitude: { type: Number, required: true },
-  timestamp: { type: Number, required: true },
+  date: { type: Date, required: true },
+  locations: [
+    {
+      latitude: { type: Number, required: true },
+      longitude: { type: Number, required: true },
+      time: { type: Date, required: true },
+    }
+  ],
 });
 
 const Location = mongoose.model('Location', locationSchema);
@@ -30,30 +35,45 @@ const Location = mongoose.model('Location', locationSchema);
 // Route to store location data
 app.post('/api/store-location', async (req, res) => {
   try {
-    const { latitude, longitude, timestamp } = req.body;
+    const { date, locations } = req.body;
 
-    // Create a new location document
-    const newLocation = new Location({
-      latitude,
-      longitude,
-      timestamp,
-    });
+    // Check if the date already exists
+    let locationData = await Location.findOne({ date });
 
-    // Save the location data to MongoDB
-    await newLocation.save();
+    // If the date exists, update it
+    if (locationData) {
+      locationData.locations.push(...locations);
+      await locationData.save();
+    } else {
+      // If the date doesn't exist, create a new entry
+      locationData = new Location({
+        date,
+        locations,
+      });
+      await locationData.save();
+    }
 
-    res.status(201).json({ message: 'Location saved successfully' });
+    res.status(201).json({ message: true });
   } catch (error) {
     console.error('Error saving location:', error);
-    res.status(500).json({ message: 'Failed to save location' });
+    res.status(500).json({ message: false });
   }
 });
 
-// Route to get all locations
+// Route to get all locations for a specific date
 app.get('/api/get-all-locations', async (req, res) => {
   try {
-    // Retrieve all location data from the database
-    const locations = await Location.find();
+    const { date } = req.query;
+
+    // If no date is provided, fetch all location data
+    let locations;
+    if (date) {
+      // Find locations by the specified date
+      locations = await Location.find({ date: new Date(date) });
+    } else {
+      // Get all locations if no date is provided
+      locations = await Location.find();
+    }
 
     // Respond with the data
     res.status(200).json(locations);
