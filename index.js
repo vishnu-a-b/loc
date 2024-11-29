@@ -25,6 +25,8 @@ const locationSchema = new mongoose.Schema({
     {
       latitude: { type: Number, required: true },
       longitude: { type: Number, required: true },
+      altitude: { type: Number, required: true },
+      mocked: { type: Boolean, required: true },
       time: { type: Number, required: true },
     }
   ],
