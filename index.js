@@ -42,9 +42,14 @@ app.post('/api/store-location', async (req, res) => {
     // Check if the date already exists
     let locationData = await Location.findOne({ date });
 
-    // If the date exists, update it
     if (locationData) {
-      locationData.locations.push(...locations);
+      // Filter out duplicate locations
+      const existingLocations = new Set(locationData.locations.map(loc => `${loc.latitude},${loc.longitude},${loc.time}`));
+      const filteredLocations = locations.filter(loc => 
+        !existingLocations.has(`${loc.time}`)
+      );
+
+      locationData.locations.push(...filteredLocations);
       await locationData.save();
     } else {
       // If the date doesn't exist, create a new entry
@@ -61,6 +66,7 @@ app.post('/api/store-location', async (req, res) => {
     res.status(500).json({ message: false });
   }
 });
+
 
 // Route to get all locations for a specific date
 app.get('/api/get-all-locations', async (req, res) => {
