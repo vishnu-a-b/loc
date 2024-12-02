@@ -1,24 +1,25 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-const cors = require('cors');  // Import CORS
+const cors = require('cors');
 
 // Create an Express app
 const app = express();
 
 // Middleware
-app.use(cors());  // Enable CORS for all routes
-app.use(bodyParser.json());
+app.use(cors()); // Enable CORS for all routes
+app.use(bodyParser.json({ limit: '10mb' })); // Allow larger payloads
 
 // MongoDB URL (replace with your actual MongoDB connection string)
 const dbURL = 'mongodb+srv://vishnuab1207:cfGPGTfxu8LVkbU6@cluster0.xgensfz.mongodb.net/eshop';
 
 // MongoDB Connection
-mongoose.connect(dbURL, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose
+  .connect(dbURL, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log('Error connecting to MongoDB:', err));
+  .catch(err => console.error('Error connecting to MongoDB:', err));
 
-// Create a schema for Location Data
+// Define Location Schema
 const locationSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   locations: [
@@ -28,35 +29,41 @@ const locationSchema = new mongoose.Schema({
       altitude: { type: Number },
       mocked: { type: Boolean },
       time: { type: Number, required: true },
-    }
+    },
   ],
 });
 
+// Location Model
 const Location = mongoose.model('Location', locationSchema);
 
-// Route to store location data
+// API Routes
+
+// Store Location Data
 app.post('/api/store-location', async (req, res) => {
   try {
     const { date, locations } = req.body;
 
-    // Check if the date already exists
-    let locationData = await Location.findOne({ date });
+    if (!date || !Array.isArray(locations) || locations.length === 0) {
+      return res.status(400).json({ message: 'Invalid input data' });
+    }
+
+    let locationData = await Location.findOne({ date: new Date(date) });
 
     if (locationData) {
-      // Filter out duplicate locations
-      const existingLocations = new Set(locationData.locations.map(loc => `${loc.latitude},${loc.longitude},${loc.time}`));
-      const filteredLocations = locations.filter(loc => 
-        !existingLocations.has(`${loc.time}`)
+      const existingLocationKeys = new Set(
+        locationData.locations.map(loc => `${loc.latitude},${loc.longitude},${loc.time}`)
       );
 
-      locationData.locations.push(...filteredLocations);
-      await locationData.save();
+      const uniqueLocations = locations.filter(
+        loc => !existingLocationKeys.has(`${loc.latitude},${loc.longitude},${loc.time}`)
+      );
+
+      if (uniqueLocations.length > 0) {
+        locationData.locations.push(...uniqueLocations);
+        await locationData.save();
+      }
     } else {
-      // If the date doesn't exist, create a new entry
-      locationData = new Location({
-        date,
-        locations,
-      });
+      locationData = new Location({ date, locations });
       await locationData.save();
     }
 
@@ -67,23 +74,18 @@ app.post('/api/store-location', async (req, res) => {
   }
 });
 
-
-// Route to get all locations for a specific date
+// Get All Locations by Date
 app.get('/api/get-all-locations', async (req, res) => {
   try {
     const { date } = req.query;
-
-    // If no date is provided, fetch all location data
     let locations;
+
     if (date) {
-      // Find locations by the specified date
       locations = await Location.find({ date: new Date(date) });
     } else {
-      // Get all locations if no date is provided
       locations = await Location.find();
     }
 
-    // Respond with the data
     res.status(200).json(locations);
   } catch (error) {
     console.error('Error retrieving locations:', error);
@@ -91,7 +93,7 @@ app.get('/api/get-all-locations', async (req, res) => {
   }
 });
 
-// Start the server
+// Start the Server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
