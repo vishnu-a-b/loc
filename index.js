@@ -85,29 +85,56 @@ app.post('/api/store-location', async (req, res) => {
 });
 
 // Get All Locations by Date and Employee
+// Get Locations by Date Interval and Employee
+// Get Locations by Date Interval with Sorted Locations Using Aggregation
 app.get('/api/get-all-locations', async (req, res) => {
   try {
-    const { date, employeeId } = req.query;
-    let locations;
+    const { startDate, endDate, employeeId } = req.query;
 
-    // Ensure the date query is properly parsed
-    const parsedDate = date ? new Date(date) : null;
+    // Ensure the dates are properly parsed
+    const parsedStartDate = startDate ? new Date(startDate) : null;
+    const parsedEndDate = endDate ? new Date(endDate) : null;
 
-    // Check if employeeId is provided to filter by employee
-    if (parsedDate && employeeId) {
-      locations = await Location.find({ date: parsedDate, employeeId });
-    } else if (parsedDate) {
-      locations = await Location.find({ date: parsedDate });
-    } else {
-      locations = await Location.find();
+    // Build the match query
+    const matchQuery = {};
+
+    if (parsedStartDate && parsedEndDate) {
+      matchQuery.date = {
+        $gte: parsedStartDate,
+        $lte: parsedEndDate,
+      };
+    } else if (parsedStartDate) {
+      matchQuery.date = { $gte: parsedStartDate };
+    } else if (parsedEndDate) {
+      matchQuery.date = { $lte: parsedEndDate };
     }
+
+    if (employeeId) {
+      matchQuery.employeeId = employeeId;
+    }
+
+    // MongoDB aggregation pipeline
+    const locations = await Location.aggregate([
+      { $match: matchQuery }, // Filter by date range and employeeId
+      { $unwind: "$locations" }, // Unwind the locations array
+      { $sort: { "locations.time": 1 } }, // Sort by time in ascending order
+      {
+        $group: {
+          _id: "$_id", // Group back by the document's original ID
+          date: { $first: "$date" }, // Preserve the date field
+          employeeId: { $first: "$employeeId" }, // Preserve the employeeId field
+          locations: { $push: "$locations" }, // Reassemble the sorted locations array
+        },
+      },
+    ]);
 
     res.status(200).json(locations);
   } catch (error) {
-    console.error('Error retrieving locations:', error);
+    console.error('Error retrieving sorted locations:', error);
     res.status(500).json({ message: 'Failed to retrieve locations' });
   }
 });
+
 
 // Start the Server
 const PORT = process.env.PORT || 5001;
