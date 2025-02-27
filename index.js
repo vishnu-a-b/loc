@@ -31,7 +31,7 @@ const locationSchema = new mongoose.Schema(
 );
 
 // Create indexes on employeeId and time for better performance on queries
-locationSchema.index({ staff: 1, date: 1 }); // Compound index on employeeId and time
+locationSchema.index({ staff: 1, date: 1 }, { unique: true }); // Compound index on employeeId and time
 
 // Location Model
 const Location = mongoose.model("Location", locationSchema);
