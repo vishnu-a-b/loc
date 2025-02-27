@@ -22,25 +22,16 @@ mongoose
 // Define Location Schema
 const locationSchema = new mongoose.Schema(
   {
-    employeeId: { type: String, required: true },
-    coordinates: {
-      type: [Number], // [latitude, longitude]
-      required: true,
-      validate: {
-        validator: function (arr) {
-          return arr.length === 2; // Ensure it is a tuple
-        },
-        message: "Coordinates must be a pair [latitude, longitude].",
-      },
-    },
-    mocked: { type: Boolean, required: false }, // 0 or 1
-    time: { type: Date, required: true },
+    staff: { type: String, required: true },
+    date: { type: Date, required: true },
+    lattitude: { type: String, required: true },
+    longitude: { type: String, required: true },
   },
   { collection: "locations" }
 );
 
 // Create indexes on employeeId and time for better performance on queries
-locationSchema.index({ employeeId: 1, time: 1 }); // Compound index on employeeId and time
+locationSchema.index({ staff: 1, date: 1 }); // Compound index on employeeId and time
 
 // Location Model
 const Location = mongoose.model("Location", locationSchema);
@@ -56,17 +47,7 @@ app.post("/api/store-location", async (req, res) => {
     if (!Array.isArray(locations) || locations.length === 0) {
       return res.status(400).json({ message: false, msg: "Invalid input data" });
     }
-
-    // Filter unique locations based on employeeId and time
-    const bulkOps = locations.map((loc) => ({
-      updateOne: {
-        filter: { employeeId: loc.employeeId, time: new Date(loc.time) },
-        update: { $setOnInsert: loc },
-        upsert: true, // Prevent duplicate entries
-      },
-    }));
-
-    await Location.bulkWrite(bulkOps);
+    await Location.insertMany(locations);
     res.status(201).json({ message: true, msg: "Locations saved successfully" });
   } catch (error) {
     console.error("Error saving location:", error);
@@ -77,15 +58,15 @@ app.post("/api/store-location", async (req, res) => {
 // Get Locations by Employee
 app.get("/api/get-all-locations", async (req, res) => {
   try {
-    const { employeeId } = req.query;
+    const { staff } = req.query;
 
     // Validate input
-    if (!employeeId) {
+    if (!staff) {
       return res.status(400).json({ message: "Employee ID is required" });
     }
 
     // Fetch locations for the given employee
-    const locations = await Location.find({ employeeId }).sort({ time: 1 });
+    const locations = await Location.find({ staff }).sort({ date: 1 });
 
     res.status(200).json({ message: true, locations });
   } catch (error) {
