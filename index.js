@@ -24,7 +24,7 @@ const locationSchema = new mongoose.Schema(
   {
     staff: { type: String, required: true },
     date: { type: Date, required: true },
-    lattitude: { type: String, required: true },
+    latitude: { type: String, required: true },
     longitude: { type: String, required: true },
   },
   { collection: "locations" }
