@@ -61,15 +61,21 @@ app.post("/api/store-location", async (req, res) => {
 // Get Locations by Employee
 app.get("/api/get-all-locations", async (req, res) => {
   try {
-    const { staff } = req.query;
+    const { staff, start, end } = req.query;
 
     // Validate input
     if (!staff) {
       return res.status(400).json({ message: "Employee ID is required" });
     }
 
-    // Fetch locations for the given employee
-    const locations = await Location.find({ staff }).sort({ date: 1 });
+    // Build the query object
+    const query = { staff };
+    if (start && end) {
+      query.date = { $gte: new Date(start), $lte: new Date(end) };
+    }
+
+    // Fetch locations for the given employee within the date range
+    const locations = await Location.find(query).sort({ date: 1 });
 
     res.status(200).json({ message: true, locations });
   } catch (error) {
