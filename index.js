@@ -47,14 +47,12 @@ app.post("/api/store-location", async (req, res) => {
     if (!Array.isArray(locations) || locations.length === 0) {
       return res.status(400).json({ message: false, msg: "Invalid input data" });
     }
-    const data=locations.map((location)=>{
-      return {...location,date:new Date(location.date)}
-    }
-    )
+    
     // Save locations to the database
-    await Location.insertMany(data);
+    await Location.insertMany(locations);
     res.status(201).json({ message: true, msg: "Locations saved successfully" });
   } catch (error) {
+    
     console.error("Error saving location:", error);
     res.status(500).json({ message: false, error: error.message });
   }
