@@ -71,7 +71,7 @@ app.get("/api/get-all-locations", async (req, res) => {
     // Build the query object
     const query = { staff };
     if (start && end) {
-      query.date = { $gte: new Date(start), $lte: new Date(end) };
+      query.date = { $gte: start, $lte: end };
     }
 
     // Fetch locations for the given employee within the date range
